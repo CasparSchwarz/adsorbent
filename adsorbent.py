@@ -43,7 +43,8 @@ class Adsorbent:
         self.W = 0 # cm^3/g
         self.c_p = 1 # J/gK
         
-        # Fitted parameters for Dubinin EQ-model
+        # Fitted parameters for Dubinin EQ-model, w_max = 0.378
+        # Parameters are for Invensor Silica gel 123 + Water
         #          cm^3/g             J/g                 J/g                 cm^3/g
         self.c0 = [0.477306939792391, 133.06286794344513, -93.03831417288345, -0.006761042963097699] 
         
@@ -167,6 +168,39 @@ class Adsorbent:
     def get_p_sat(self, T):
         self.ads.setState_Txi(T)
         return self.ads.VLE.p_v # Pa
+    
+    def cal_T_lumped_t(self, alpha, A, t, T_carrier, T_0):
+        '''
+        Calculate the temperature of the sorbent (assuming lumped parameter model)
+        relative to alpha, Area A, time, temperature of the carrier and starting temp
+        '''
+        return T_carrier - (T_carrier- T_0)*np.exp(-(alpha*A)/(self.m*self.c_p)*t)
+    
+    def cost_of_T_lumped(self, x, A, t, T_carrier, T_0, T_sam):
+        
+        
+        return T_sam - self.cal_T_lumped_t(x, A, t, T_carrier, T_0)
+    
+    def get_alpha(self, A, t, T_carrier, T_0, T_sam, alpha_0):
+        
+        alpha = minimize(self.cost_of_T_lumped, alpha_0, args=(A, t, T_carrier,\
+                                                              T_0, T_sam))
+            
+        return alpha.x[0]
+
+    def calibrate_alpha(self, A, t, T_carrier, T_sam, alpha_0):
+        T_0 = T_sam[0]
+        
+        alpha = []
+        for i in range(len(T_carrier)):
+            alpha.append(self.get_alpha(A, t[i], T_carrier[i], T_0, T_sam[i], alpha_0))
+            
+        return np.mean(alpha), max(alpha), min(alpha)
+    
+    ###########################################################################
+    ##### Following functions for determining of starting temperatures for ####
+    ##### LTJ experiment ######################################################
+    ###########################################################################
 
     def set_temperatures(self, T_vap, T_ads, T_des):
         # Input in °C
@@ -208,34 +242,6 @@ class Adsorbent:
 
         ic("Loading x set")
         ic(self.x_ih, self.x_ic)
-        
-    def cal_T_lumped_t(self, alpha, A, t, T_carrier, T_0):
-        '''
-        Calculate the temperature of the sorbent (assuming lumped parameter model)
-        relative to alpha, Area A, time, temperature of the carrier and starting temp
-        '''
-        return T_carrier - (T_carrier- T_0)*np.exp(-(alpha*A)/(self.m*self.c_p)*t)
-    
-    def cost_of_T_lumped(self, x, A, t, T_carrier, T_0, T_sam):
-        
-        
-        return T_sam - self.cal_T_lumped_t(x, A, t, T_carrier, T_0)
-    
-    def get_alpha(self, A, t, T_carrier, T_0, T_sam, alpha_0):
-        
-        alpha = minimize(self.cost_of_T_lumped, alpha_0, args=(A, t, T_carrier,\
-                                                              T_0, T_sam))
-            
-        return alpha.x[0]
-
-    def calibrate_alpha(self, A, t, T_carrier, T_sam, alpha_0):
-        T_0 = T_sam[0]
-        
-        alpha = []
-        for i in range(len(T_carrier)):
-            alpha.append(self.get_alpha(A, t[i], T_carrier[i], T_0, T_sam[i], alpha_0))
-            
-        return np.mean(alpha), max(alpha), min(alpha)
 
     def get_isostere(self, x_load, p_start, p_end, T_start, dT = 1, verbose=False):
         '''
