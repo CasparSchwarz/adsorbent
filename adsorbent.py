@@ -343,21 +343,21 @@ def test():
     print("Running test with temperature set:")
     print("15, 27, 75")
     ic.disable()
-    sor = Sorbens()
+    sor = Adsorbent()
     print(sor.get_initial_temperatures(15, 27, 75))
     
 def isostere_test():
     print("Running test to create isostere")
     print("Start at p: 100 Pa, x: 0,1")
     
-    sor = Sorbens()
+    sor = Adsorbent()
     isostere = sor.get_isostere(0.1/1000, 100, 10000, sor.get_T(100, 0.1), dT=0.01)
     
 def c_p_ads_test():
     print("Running test to calculate c_p_ads")
     print("For 20 °C and 5000 Pa")
     
-    sor = Sorbens()
+    sor = Adsorbent()
     sor.T = 273.15 + 20
     sor.p = 5000
     
